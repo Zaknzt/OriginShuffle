@@ -1,6 +1,6 @@
 # OriginShuffle v0.3.1
 
-**Release state:** STABLE / READY FOR PUBLICATION
+**Release state:** STABLE / PUBLIC RELEASE
 
 OriginShuffle is a client-side cosmetic addon for Windower 4. When a supported weapon family is enabled, the local player's real Weapon Skill can be rendered on that client with a different Weapon Skill animation from the **same weapon family**.
 
