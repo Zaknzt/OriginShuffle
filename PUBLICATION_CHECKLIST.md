@@ -1,6 +1,6 @@
 # Publication Checklist — v0.3.1
 
-**Release decision:** READY FOR PUBLICATION
+**Release decision:** PUBLISHED / STABLE
 
 ## Source and sanitation
 
@@ -36,12 +36,12 @@ They remain useful follow-up/community verification items. They are not represen
 - [x] BSD 3-Clause selected for the public project.
 - [x] `LICENSE` added with copyright holder `Zaknzt`, year 2026.
 
-## Remaining publication actions
+## Publication status
 
-- [ ] Change repository visibility from Private to Public.
-- [ ] Create tag `v0.3.1`.
-- [ ] Create GitHub Release `OriginShuffle v0.3.1`.
-- [ ] Attach clean install ZIP if desired.
+- [x] Repository visibility changed from Private to Public.
+- [x] Tag `v0.3.1` created.
+- [x] GitHub Release `OriginShuffle v0.3.1` published.
+- [x] Clean install ZIP `OriginShuffle_v0.3.1_INSTALL.zip` attached to the release.
 - [ ] Perform one clean-download smoke test from the public release.
 
 No private FFXI Development II Source or Master change is implied by publication.
