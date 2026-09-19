@@ -1,0 +1,12 @@
+# Windower/runtime-generated state
+data/
+settings.xml
+*.log
+*.txt
+
+# Local packaging / editor noise
+*.zip
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
