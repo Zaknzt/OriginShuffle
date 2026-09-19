@@ -1,12 +1,12 @@
 _addon.name = 'OriginShuffle'
 _addon.author = 'Zaknzt'
-_addon.version = '0.3.1-rc1'
+_addon.version = '0.3.1'
 _addon.commands = {'originshuffle', 'oshuffle'}
 
--- OriginShuffle v0.3.1-rc1
--- PUBLIC CANDIDATE / ANY-WS SAME-FAMILY VISUAL SHUFFLE / NOT YET PUBLISHED
+-- OriginShuffle v0.3.1
+-- PUBLIC RELEASE / ANY-WS SAME-FAMILY VISUAL SHUFFLE
 --
--- Local-client cosmetic experiment only.
+-- Local-client cosmetic addon.
 -- Every supported local-player Weapon Skill in an enabled weapon family may be
 -- visually replaced by a different Weapon Skill animation from that SAME family.
 --
