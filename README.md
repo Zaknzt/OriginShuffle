@@ -1,6 +1,6 @@
-# OriginShuffle v0.3.1-rc1
+# OriginShuffle v0.3.1
 
-**Release state:** PUBLIC CANDIDATE / NOT YET PUBLISHED
+**Release state:** STABLE / READY FOR PUBLICATION
 
 OriginShuffle is a client-side cosmetic addon for Windower 4. When a supported weapon family is enabled, the local player's real Weapon Skill can be rendered on that client with a different Weapon Skill animation from the **same weapon family**.
 
@@ -43,7 +43,7 @@ OriginShuffle does **not** intentionally modify:
 - inventory; or
 - server state.
 
-Because the modification is applied only to the local client's incoming action representation and is not sent back to the server, other clients should continue to receive the real server action. A second-client observer check remains part of the release gate for this release candidate.
+Because the modification is applied only to the local client's incoming action representation and is not sent back to the server, other clients should continue to receive the real server action.
 
 ## Installation
 
@@ -97,37 +97,28 @@ Supported family names and common aliases:
 
 ## Supported visual families
 
-The current candidate contains same-family replacement pools for 14 weapon families:
+OriginShuffle contains same-family replacement pools for 14 weapon families:
 
 Hand-to-Hand, Dagger, Sword, Great Sword, Axe, Great Axe, Scythe, Polearm, Katana, Great Katana, Club, Staff, Archery, and Marksmanship.
 
 Prime Weapon Skills can be real-action triggers when their Windower resource entry maps to the relevant weapon family. Replacement candidates come from the maintained same-family animation pools in the addon.
 
+## Validation
+
+The private v0.3.0 gameplay implementation was used live for an extended session across multiple weapon families and accepted by the owner. The v0.3.1 release changes only public-facing metadata plus an explicit `//originshuffle help` branch; the Weapon Skill family pools and action-transformation logic are unchanged from that accepted predecessor.
+
+The public candidate also passed syntax/static validation and a mocked action harness before release finalization.
+
+Ranged-family presentation and second-client observation were not separately itemized in the recorded live evidence. Those remain useful additional community verification, but they are not represented here as completed live observations.
+
 ## Dependencies
 
-OriginShuffle uses Windower's Lua addon environment and its `actions` and `resources` libraries. Those dependencies are referenced through their APIs; their source code is not bundled in this repository candidate.
-
-## Release-candidate validation still required
-
-Before a public release:
-
-1. Test multiple real Weapon Skills in Sword.
-2. Test Origin plus at least one other real Scythe Weapon Skill.
-3. Test at least one additional melee weapon family.
-4. Test Archery and/or Marksmanship separately.
-5. Confirm family OFF immediately restores native animations.
-6. Confirm family ON substitutes only within that family.
-7. Confirm the real animation is never selected as its own replacement.
-8. Confirm damage, TP use, action message, and skillchain behavior remain those of the real Weapon Skill.
-9. Where practical, verify from a second client that another player still sees the real action.
-10. Verify zone, addon reload, and unload behavior.
-11. Run a GearSwap regression smoke test around Weapon Skill precast/midcast/aftercast.
-12. Select an explicit public license before publication.
+OriginShuffle uses Windower's Lua addon environment and its `actions` and `resources` libraries. Those dependencies are referenced through their APIs; their source code is not bundled in this repository.
 
 ## License
 
-**No public license has been selected for this release candidate.** This repository candidate must not be published as a release until the owner explicitly selects a license and a `LICENSE` file is added.
+OriginShuffle is released under the **BSD 3-Clause License**. See [LICENSE](LICENSE).
 
 ## Provenance
 
-This public candidate was derived from the exact private canonical OriginShuffle v0.3.0 implementation. Private bundle contents, development governance, evidence, and unrelated source are not part of this public package.
+This public release was derived from the exact private canonical OriginShuffle v0.3.0 implementation. Private bundle contents, development governance, evidence, and unrelated source are not part of this public repository.
