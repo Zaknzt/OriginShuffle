@@ -1,14 +1,18 @@
 _addon.name = 'OriginShuffle'
 _addon.author = 'Zaknzt'
-_addon.version = '0.3.1'
+_addon.version = '0.4.1'
 _addon.commands = {'originshuffle', 'oshuffle'}
 
--- OriginShuffle v0.3.1
--- PUBLIC RELEASE / ANY-WS SAME-FAMILY VISUAL SHUFFLE
+-- OriginShuffle v0.4.1
+-- PUBLIC RELEASE / CROSS-FAMILY VISUAL ROUTING + OPTIONAL ANNOUNCEMENT
 --
 -- Local-client cosmetic addon.
--- Every supported local-player Weapon Skill in an enabled weapon family may be
--- visually replaced by a different Weapon Skill animation from that SAME family.
+-- Every supported local-player Weapon Skill in an enabled trigger family may be
+-- visually replaced by a different Weapon Skill animation from its configured
+-- visual family. The default route is same-family; cross-family routing is
+-- explicit and session-local (for example: Great Sword -> Great Katana).
+-- Optional session-local announcement echo can report the chosen local visual
+-- after a successful substitution. It is OFF by default and cosmetic only.
 --
 -- The real server action is never changed. Only the incoming 0x028 per-action
 -- animation field is changed locally. No outgoing packets, combat commands,
@@ -198,15 +202,18 @@ local VISUAL_POOLS = {
 }
 
 local enabled = {}
+local visual_family_by_skill = {}
 local listener_id = nil
 local substitutions_total = 0
 local substitutions_by_skill = {}
 local last_visual_by_skill = {}
 local last_real_ws_by_skill = {}
 local rng_state = nil
+local announce_enabled = false
 
 for skill_id in pairs(FAMILY_BY_SKILL) do
     enabled[skill_id] = false
+    visual_family_by_skill[skill_id] = skill_id
     substitutions_by_skill[skill_id] = 0
 end
 
@@ -280,13 +287,13 @@ local function collect_original_animations(original)
     return blocked
 end
 
-local function choose_visual(skill_id, blocked_animations, player_id)
-    local pool = VISUAL_POOLS[skill_id]
+local function choose_visual(trigger_skill_id, visual_skill_id, blocked_animations, player_id)
+    local pool = VISUAL_POOLS[visual_skill_id]
     if type(pool) ~= 'table' or #pool < 1 then return nil end
     blocked_animations = blocked_animations or {}
 
     local candidates = {}
-    local last = last_visual_by_skill[skill_id]
+    local last = last_visual_by_skill[trigger_skill_id]
     for _, visual in ipairs(pool) do
         if not blocked_animations[visual.animation] and (not last or visual.animation ~= last.animation) then
             candidates[#candidates+1] = visual
@@ -306,7 +313,7 @@ local function choose_visual(skill_id, blocked_animations, player_id)
     if #candidates == 0 then return nil end
     local index = (next_random_u32(player_id) % #candidates) + 1
     local visual = candidates[index]
-    last_visual_by_skill[skill_id] = visual
+    last_visual_by_skill[trigger_skill_id] = visual
     return visual
 end
 
@@ -374,14 +381,24 @@ local function action_listener(original, modified)
 
     local blocked = collect_original_animations(original)
     if not blocked then return nil end
-    local visual = choose_visual(context.skill_id, blocked, player_id)
+    local visual_skill_id = visual_family_by_skill[context.skill_id] or context.skill_id
+    if not FAMILY_BY_SKILL[visual_skill_id] or not VISUAL_POOLS[visual_skill_id] then return nil end
+    local visual = choose_visual(context.skill_id, visual_skill_id, blocked, player_id)
     if not visual then return nil end
 
     local transformed = apply_visual(original, modified, context, visual)
     if transformed then
         substitutions_total = substitutions_total + 1
         substitutions_by_skill[context.skill_id] = (substitutions_by_skill[context.skill_id] or 0) + 1
-        last_real_ws_by_skill[context.skill_id] = context.ws and context.ws.en or ('WS ID '..context.ws_id)
+        local real_ws_name = context.ws and context.ws.en or ('WS ID '..context.ws_id)
+        last_real_ws_by_skill[context.skill_id] = real_ws_name
+        if announce_enabled then
+            local visual_family = FAMILY_BY_SKILL[visual_skill_id]
+            chat(158, ('%s -> %s%s'):format(
+                tostring(real_ws_name),
+                tostring(visual.name or ('animation '..tostring(visual.animation))),
+                visual_family and (' ['..visual_family.name..' visual]') or ''))
+        end
     end
     return transformed
 end
@@ -393,6 +410,30 @@ local function set_family(skill_id, value, quiet)
         chat(158, ('%s: %s'):format(FAMILY_BY_SKILL[skill_id].name, enabled[skill_id] and 'ON' or 'OFF'))
     end
     return true
+end
+
+local function set_visual_family(trigger_skill_id, visual_skill_id, enable_trigger, quiet)
+    if not FAMILY_BY_SKILL[trigger_skill_id] or not FAMILY_BY_SKILL[visual_skill_id] or not VISUAL_POOLS[visual_skill_id] then
+        return false
+    end
+    visual_family_by_skill[trigger_skill_id] = visual_skill_id
+    last_visual_by_skill[trigger_skill_id] = nil
+    if enable_trigger then enabled[trigger_skill_id] = true end
+    if not quiet then
+        chat(158, ('%s visual route: %s%s'):format(
+            FAMILY_BY_SKILL[trigger_skill_id].name,
+            FAMILY_BY_SKILL[visual_skill_id].name,
+            enable_trigger and ' | ON' or ''))
+    end
+    return true
+end
+
+local function set_announce(value, quiet)
+    announce_enabled = value and true or false
+    if not quiet then
+        chat(158, 'Visual announcement echo: '..(announce_enabled and 'ON' or 'OFF'))
+    end
+    return announce_enabled
 end
 
 local function set_all(value)
@@ -410,12 +451,15 @@ end
 local function print_family_status(skill_id)
     local family = FAMILY_BY_SKILL[skill_id]
     if not family then return end
-    local pool = VISUAL_POOLS[skill_id] or {}
+    local visual_skill_id = visual_family_by_skill[skill_id] or skill_id
+    local visual_family = FAMILY_BY_SKILL[visual_skill_id]
+    local pool = VISUAL_POOLS[visual_skill_id] or {}
     local last = last_visual_by_skill[skill_id]
     local real = last_real_ws_by_skill[skill_id]
-    chat(207, ('%-13s %s | pool %d | last: %s%s'):format(
+    chat(207, ('%-13s %s | visual: %-13s | pool %d | last: %s%s'):format(
         family.name,
         enabled[skill_id] and 'ON ' or 'OFF',
+        visual_family and visual_family.name or 'UNKNOWN',
         #pool,
         last and last.name or 'none',
         real and (' <- '..real) or ''))
@@ -424,7 +468,8 @@ end
 local ORDERED_SKILLS = {1,2,3,4,5,6,7,8,9,10,11,12,25,26}
 
 local function print_status(skill_id)
-    chat(207, ('OriginShuffle v%s | same-family ANY-WS visual shuffle'):format(_addon.version))
+    chat(207, ('OriginShuffle v%s | explicit visual-family routing; default same-family'):format(_addon.version))
+    chat(207, 'Visual announcement echo: '..(announce_enabled and 'ON' or 'OFF'))
     if skill_id then
         print_family_status(skill_id)
     else
@@ -451,10 +496,16 @@ end
 
 local function print_help()
     chat(207, 'Commands: //originshuffle <weapon> on | off | status')
+    chat(207, '          //originshuffle <weapon> visual <visual-weapon|same>')
     chat(207, '          //originshuffle all on | off')
+    chat(207, '          //originshuffle announce on | off | status')
+    chat(207, '          //originshuffle echo on | off | status')
     chat(207, '          //originshuffle pool <weapon>')
     chat(207, '          //originshuffle status')
-    chat(207, 'Examples: //originshuffle sword on | //originshuffle scythe on | //originshuffle all off')
+    chat(207, 'Examples: //originshuffle greatsword visual greatkatana | //originshuffle sword on')
+    chat(207, '          //originshuffle greatsword visual same | //originshuffle announce on')
+    chat(207, 'Visual routing and announcement echo are session-local; announcement is OFF by default.')
+    chat(207, 'Setting a visual route also turns that trigger family ON.')
     chat(207, 'Legacy:   //originshuffle on/off toggles Scythe only')
 end
 
@@ -464,14 +515,10 @@ windower.register_event('addon command', function(...)
     local args = tokenize(...)
     local a1 = normalize_token(args[1])
     local a2 = normalize_token(args[2])
+    local a3 = normalize_token(args[3])
 
     if a1 == '' or a1 == 'status' then
         print_status()
-        return
-    end
-
-    if a1 == 'help' then
-        print_help()
         return
     end
 
@@ -486,6 +533,17 @@ windower.register_event('addon command', function(...)
         return
     end
 
+    if a1 == 'announce' or a1 == 'echo' then
+        if a2 == 'on' or a2 == 'off' then
+            set_announce(a2 == 'on')
+        elseif a2 == '' or a2 == 'status' then
+            chat(207, 'Visual announcement echo: '..(announce_enabled and 'ON' or 'OFF'))
+        else
+            print_help()
+        end
+        return
+    end
+
     if a1 == 'pool' then
         local skill_id = resolve_family_token(args[2])
         if skill_id then print_pool(skill_id) else print_help() end
@@ -496,6 +554,18 @@ windower.register_event('addon command', function(...)
     if skill_id then
         if a2 == 'on' or a2 == 'off' then
             set_family(skill_id, a2 == 'on')
+        elseif a2 == 'visual' then
+            local visual_skill_id = nil
+            if a3 == 'same' or a3 == 'self' then
+                visual_skill_id = skill_id
+            else
+                visual_skill_id = resolve_family_token(args[3])
+            end
+            if visual_skill_id then
+                set_visual_family(skill_id, visual_skill_id, true)
+            else
+                print_help()
+            end
         elseif a2 == 'status' or a2 == '' then
             print_status(skill_id)
         elseif a2 == 'pool' then
@@ -511,7 +581,7 @@ end)
 
 windower.register_event('load', function()
     if listener_id then
-        chat(158, ('v%s loaded with all weapon families OFF. Use //originshuffle <weapon> on'):format(_addon.version))
+        chat(158, ('v%s loaded: families OFF, same-family routes, announcement echo OFF. Use //originshuffle <weapon> visual <weapon>'):format(_addon.version))
     else
         chat(167, 'ERROR: action listener was not created. Addon is fail-closed.')
     end
@@ -519,6 +589,7 @@ end)
 
 windower.register_event('unload', function()
     for skill_id in pairs(enabled) do enabled[skill_id] = false end
+    announce_enabled = false
     if listener_id then
         ActionPacket.close_listener(listener_id)
         listener_id = nil
@@ -535,8 +606,12 @@ if rawget(_G, 'ORIGINSHUFFLE_TEST_MODE') then
         apply_visual = apply_visual,
         choose_visual = choose_visual,
         set_family = set_family,
+        set_visual_family = set_visual_family,
+        set_announce = set_announce,
         set_all = set_all,
         get_enabled = function(skill_id) return enabled[skill_id] end,
+        get_visual_family = function(skill_id) return visual_family_by_skill[skill_id] end,
+        get_announce = function() return announce_enabled end,
         get_listener_id = function() return listener_id end,
         get_last_visual = function(skill_id) return last_visual_by_skill[skill_id] end,
         set_rng_state = function(v)
@@ -548,6 +623,7 @@ if rawget(_G, 'ORIGINSHUFFLE_TEST_MODE') then
             family_by_skill = FAMILY_BY_SKILL,
             aliases = ALIASES,
             visual_pools = VISUAL_POOLS,
+            visual_family_by_skill = visual_family_by_skill,
         },
     }
 end

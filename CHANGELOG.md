@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.1 — Cross-family routing and optional visual announcement
+
+Release state: **STABLE**
+
+- add explicit session-local trigger-family -> visual-family routing;
+- retain same-family routing as the default for every supported family;
+- add `//originshuffle <weapon> visual <visual-weapon>` and `visual same`;
+- setting a visual route enables that trigger family;
+- add optional local visual announcement with `announce on|off|status` and `echo` alias;
+- report real WS -> selected local visual when announcement is enabled;
+- retain default-OFF families and default-OFF announcement state on every load;
+- preserve the existing fail-closed local-client-only action mutation boundary.
+
+### Acceptance
+
+- owner live test: cross-family Great Sword -> Great Katana routing passed;
+- owner live test: optional visual announcement passed;
+- owner explicitly approved the v0.4.1 addon feature set for publication on 2026-09-22;
+- public runtime differs from the accepted private v0.4.1 runtime only in public author/release metadata.
+
 ## 0.3.1 — Initial public release
 
 Release state: **STABLE**

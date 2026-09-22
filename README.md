@@ -1,61 +1,54 @@
-# OriginShuffle v0.3.1
+# OriginShuffle v0.4.1
 
 **Release state:** STABLE / PUBLIC RELEASE
 
-OriginShuffle is a client-side cosmetic addon for Windower 4. When a supported weapon family is enabled, the local player's real Weapon Skill can be rendered on that client with a different Weapon Skill animation from the **same weapon family**.
+OriginShuffle is a client-side cosmetic addon for Windower 4. It can replace the local animation shown for your real Weapon Skill while leaving the server action unchanged.
 
-The server action remains the real Weapon Skill. OriginShuffle does not send a substitute Weapon Skill to the server.
+By default, each enabled weapon family uses its own visual pool. v0.4.1 also supports explicit **cross-family visual routing**, so a real Great Sword WS can, for example, be rendered locally with a Great Katana WS animation.
 
 ## What changes
 
 OriginShuffle changes only the incoming action's per-action `animation` field for the local player's completed Weapon Skill action.
 
-Example with Sword enabled:
+Example:
 
-- real action: `Fast Blade`
-- server action: `Fast Blade`
-- damage / TP use / skillchain properties / action message: remain those of `Fast Blade`
-- local visual: a different Sword Weapon Skill animation, such as `Red Lotus Blade`, `Savage Blade`, or `Vorpal Blade`
+```text
+//originshuffle greatsword visual greatkatana
+```
 
-The original animation is excluded from the candidate pool. When alternatives exist, the same replacement visual is also avoided on consecutive substitutions for that weapon family.
+A real `Torcleaver` remains Torcleaver for the server, damage, TP consumption, skillchain properties/messages, target, and GearSwap behavior, while your local client may render a Great Katana visual such as `Tachi: Fudo`.
 
-## Safety boundary
+Cross-family routes are explicit and session-local. All trigger families start **OFF** after every addon load, and every visual route defaults to **same-family**.
 
-The implementation is deliberately fail-closed. It requires all of the following before substituting an animation:
+## Optional animation announcement
 
-- the actor is the local player;
-- the action is a Weapon Skill completion;
-- the real Weapon Skill resolves through Windower Resources;
-- the Weapon Skill maps to one of the supported weapon families;
-- that family is enabled;
-- the packet/action structure is valid; and
-- another listener has not already changed the action identity or animation.
+The local visual-name echo is **OFF by default**.
 
-OriginShuffle does **not** intentionally modify:
+```text
+//originshuffle announce on
+//originshuffle announce off
+//originshuffle announce status
+```
 
-- the real Weapon Skill ID;
-- outgoing Weapon Skill commands;
-- damage;
-- TP consumption;
-- skillchain properties or additional effects;
-- action target;
-- GearSwap state or equipment;
-- inventory; or
-- server state.
+`echo` is an alias for `announce`.
 
-Because the modification is applied only to the local client's incoming action representation and is not sent back to the server, other clients should continue to receive the real server action.
+When enabled, a successful substitution prints one local line such as:
+
+```text
+[OriginShuffle] Torcleaver -> Tachi: Fudo [Great Katana visual]
+```
+
+The left side is the real Weapon Skill. The right side is the animation selected for local display.
 
 ## Installation
 
-1. Create a folder named `OriginShuffle` under `Windower/addons/`.
+1. Create `Windower/addons/OriginShuffle/`.
 2. Copy `OriginShuffle.lua` into that folder.
-3. In FFXI, load it with:
+3. Load it in FFXI:
 
 ```text
 //lua load OriginShuffle
 ```
-
-All weapon families start **OFF** after every addon load. OriginShuffle writes no persistent configuration.
 
 ## Commands
 
@@ -63,57 +56,63 @@ All weapon families start **OFF** after every addon load. OriginShuffle writes n
 //originshuffle status
 //originshuffle help
 
-//originshuffle sword on
-//originshuffle sword off
-//originshuffle sword status
-//originshuffle sword pool
+//originshuffle <weapon> on
+//originshuffle <weapon> off
+//originshuffle <weapon> status
+//originshuffle <weapon> pool
 
-//originshuffle pool sword
+//originshuffle <weapon> visual <visual-weapon>
+//originshuffle <weapon> visual same
 
+//originshuffle announce on
+//originshuffle announce off
+//originshuffle announce status
+
+//originshuffle echo on
+//originshuffle echo off
+//originshuffle echo status
+
+//originshuffle pool <weapon>
 //originshuffle all on
 //originshuffle all off
 ```
 
 Alias: `//oshuffle`
 
+Setting an explicit visual route also turns that trigger family ON. `visual same` restores same-family routing.
+
 Legacy compatibility: bare `//originshuffle on` and `//originshuffle off` control **Scythe** only.
 
-Supported family names and common aliases:
+Supported weapon families: Hand-to-Hand, Dagger, Sword, Great Sword, Axe, Great Axe, Scythe, Polearm, Katana, Great Katana, Club, Staff, Archery, and Marksmanship.
 
-- Hand-to-Hand: `h2h`, `handtohand`, `hand-to-hand`, `hand_to_hand`
-- Dagger: `dagger`
-- Sword: `sword`
-- Great Sword: `greatsword`, `gs`, `great-sword`, `great_sword`
-- Axe: `axe`
-- Great Axe: `greataxe`, `ga`, `great-axe`, `great_axe`
-- Scythe: `scythe`
-- Polearm: `polearm`, `spear`
-- Katana: `katana`
-- Great Katana: `greatkatana`, `gkt`, `gk`, `great-katana`, `great_katana`
-- Club: `club`
-- Staff: `staff`
-- Archery: `archery`, `bow`
-- Marksmanship: `marksmanship`, `gun`, `ranged`
+## Safety boundary
 
-## Supported visual families
+The implementation is deliberately fail-closed. OriginShuffle acts only on the local player's completed Weapon Skill action after validating actor, category, real WS identity, packet/action shape, enabled trigger family, and selected visual family.
 
-OriginShuffle contains same-family replacement pools for 14 weapon families:
+OriginShuffle does **not** intentionally modify:
 
-Hand-to-Hand, Dagger, Sword, Great Sword, Axe, Great Axe, Scythe, Polearm, Katana, Great Katana, Club, Staff, Archery, and Marksmanship.
+- the real Weapon Skill ID;
+- outgoing Weapon Skill commands or packets;
+- damage;
+- TP consumption;
+- skillchain properties, messages, or additional effects;
+- target;
+- GearSwap state or equipment;
+- inventory;
+- server state; or
+- other clients' action state.
 
-Prime Weapon Skills can be real-action triggers when their Windower resource entry maps to the relevant weapon family. Replacement candidates come from the maintained same-family animation pools in the addon.
+The optional announcement uses only the existing local chat path after a successful visual substitution.
 
 ## Validation
 
-The private v0.3.0 gameplay implementation was used live for an extended session across multiple weapon families and accepted by the owner. The v0.3.1 release changes only public-facing metadata plus an explicit `//originshuffle help` branch; the Weapon Skill family pools and action-transformation logic are unchanged from that accepted predecessor.
+v0.4.1 was promoted after owner live testing and approval of the addon feature set. The cross-family Great Sword -> Great Katana route was confirmed live, and the optional announcement layer was approved with the selected visual reported locally while normal WS mechanics remained unchanged.
 
-The public candidate also passed syntax/static validation and a mocked action harness before release finalization.
-
-Ranged-family presentation and second-client observation were not separately itemized in the recorded live evidence. Those remain useful additional community verification, but they are not represented here as completed live observations.
+The public runtime is derived from the accepted private v0.4.1 implementation. Public differences are release metadata/sanitation only (`Zaknzt` author identity and public-release header wording).
 
 ## Dependencies
 
-OriginShuffle uses Windower's Lua addon environment and its `actions` and `resources` libraries. Those dependencies are referenced through their APIs; their source code is not bundled in this repository.
+OriginShuffle uses Windower's Lua addon environment and its `actions` and `resources` libraries. Those dependencies are referenced through their APIs; their source code is not bundled here.
 
 ## License
 
@@ -121,4 +120,4 @@ OriginShuffle is released under the **BSD 3-Clause License**. See [LICENSE](LICE
 
 ## Provenance
 
-This public release was derived from the exact private canonical OriginShuffle v0.3.0 implementation. Private bundle contents, development governance, evidence, and unrelated source are not part of this public repository.
+This public v0.4.1 release is derived from the owner-tested private v0.4.1 implementation. Private project governance, bundles, evidence, and unrelated source are not part of this repository.
